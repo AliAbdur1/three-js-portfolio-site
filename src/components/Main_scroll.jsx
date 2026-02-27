@@ -17,6 +17,10 @@ function Example() {
       width: window.innerWidth,
       height: window.innerHeight
     }
+    // Group
+
+    const cameraGroup = new THREE.Group()
+    scene.add(cameraGroup)
 
     // Camera
     const camera = new THREE.PerspectiveCamera(
@@ -26,7 +30,7 @@ function Example() {
       100
     )
     camera.position.z = 6
-    scene.add(camera)
+    cameraGroup.add(camera)
 
     // Renderer
     const renderer = new THREE.WebGLRenderer({ canvas,
@@ -124,6 +128,17 @@ function Example() {
 
     //Scroll end
 
+    //Cursor
+    const cursor = {
+    }
+    cursor.x = 0
+    cursor.y = 0
+
+    window.addEventListener('mousemove', (event) => {
+      cursor.x = event.clientX / sizes.width - 0.5
+      cursor.y = event.clientY / sizes.height - 0.5
+    })
+
     // Animation
     const clock = new THREE.Clock();
     const tick = () => {
@@ -131,6 +146,10 @@ function Example() {
 
       //animate camera
       camera.position.y = - scrollY / sizes.height * objectsDistance
+      const parallaxX = cursor.x * 0.5
+      const parallaxY = - cursor.y * 0.5 //this inversion is important for the parallax effect
+      cameraGroup.position.x = parallaxX
+      cameraGroup.position.y = parallaxY
       // Animate Meshes
       for( const mesh of sectionMeshes) {
         mesh.rotation.x = elapsedTime * 0.1

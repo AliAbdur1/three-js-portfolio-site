@@ -1,7 +1,9 @@
 import React, { useEffect, useRef } from 'react'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
+import { gsap } from 'gsap'
 import GUI from 'lil-gui'
+console.log(gsap)
 
 function Example() {
   const canvasRef = useRef(null)
@@ -64,6 +66,7 @@ function Example() {
     // Material Gui contols
     gui.addColor(parameters, 'materialColor').onChange(() => {
       material.color.set(parameters.materialColor)
+      particlesMaterial.color.set(parameters.materialColor)
     })
     //Meshes
 
@@ -97,6 +100,27 @@ function Example() {
 
     const sectionMeshes = [mesh1, mesh2, mesh3]
 
+    // Particles
+    const particlesCount = 200
+    const positions = new Float32Array(particlesCount * 3)
+    for (let i = 0; i < particlesCount; i++) {
+      positions[i * 3 + 0] = (Math.random() - 0.5) * 10
+      positions[i * 3 + 1] = objectsDistance * 0.5 - Math.random() * objectsDistance * sectionMeshes.length //this will make the particles spread out based on the objects array
+      positions[i * 3 + 2] = (Math.random() - 0.5) * 10
+    }
+    const particlesGeometry = new THREE.BufferGeometry()
+    particlesGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3))
+
+    const particlesMaterial = new THREE.PointsMaterial({
+      color: parameters.materialColor,
+      size: 0.03,
+      sizeAttenuation: true
+    })
+
+    //Points
+    const particles = new THREE.Points(particlesGeometry, particlesMaterial)
+    scene.add(particles)
+
     /**
      * Lights
      */
@@ -121,9 +145,27 @@ function Example() {
 
     //Scroll
     let scrollY = window.scrollY
+    let currentSection = 0
 
     window.addEventListener('scroll', () => {
       scrollY = window.scrollY
+
+      const newSection = Math.round(scrollY / sizes.height) // each section is made to fit one veiwport height
+
+      if(newSection !== currentSection) {
+        currentSection = newSection
+        gsap.to(
+          sectionMeshes[currentSection].rotation,
+          {
+            duration: 1.5,
+            ease: 'power2.inout',
+            x: '+=6',
+            y: '+=3',
+            z: '+=1.5'
+
+          }
+        )
+      }
     })
 
     //Scroll end
@@ -141,19 +183,22 @@ function Example() {
 
     // Animation
     const clock = new THREE.Clock();
+    let previousTime = 0
     const tick = () => {
       const elapsedTime = clock.getElapsedTime()
+      const deltaTime = elapsedTime - previousTime
+      previousTime = elapsedTime // screen frenquency stuff...
 
       //animate camera
       camera.position.y = - scrollY / sizes.height * objectsDistance
       const parallaxX = cursor.x * 0.5
       const parallaxY = - cursor.y * 0.5 //this inversion is important for the parallax effect
-      cameraGroup.position.x = parallaxX
-      cameraGroup.position.y = parallaxY
+      cameraGroup.position.x += (parallaxX - cameraGroup.position.x) * 5 * deltaTime
+      cameraGroup.position.y += (parallaxY - cameraGroup.position.y) * 5 * deltaTime
       // Animate Meshes
       for( const mesh of sectionMeshes) {
-        mesh.rotation.x = elapsedTime * 0.1
-        mesh.rotation.y = elapsedTime * 0.12
+        mesh.rotation.x += deltaTime * 0.1
+        mesh.rotation.y += deltaTime * 0.12
       }
       renderer.render(scene, camera)
       requestAnimationFrame(tick)
